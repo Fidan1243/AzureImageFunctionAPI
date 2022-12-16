@@ -1,9 +1,12 @@
-﻿using ImageUploader.Services;
+﻿using ImageUploader.Data;
+using ImageUploader.Models;
+using ImageUploader.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -18,14 +21,17 @@ namespace ImageUploader.Controllers
     {
 
         private readonly IWebHostEnvironment _webhost;
-
-        public ImageController(IWebHostEnvironment webhost)
+        private readonly IFileDetailRepository _fileDetailRepository;
+        public ImageController(IWebHostEnvironment webhost, IFileDetailRepository fileDetailRepository)
         {
             _webhost = webhost;
+            _fileDetailRepository = fileDetailRepository;
         }
         public IActionResult Get()
         {
-            return Ok("Files are here");
+            List<FileDetail> fileDetails = new List<FileDetail>();
+            fileDetails = _fileDetailRepository.GetFileDetails();
+            return Ok(fileDetails);
         }
         [HttpPost]
         public async Task<IActionResult> Post(IFormFile file)
