@@ -4,6 +4,8 @@ using ImageUploader.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Data.SqlClient;
@@ -45,26 +47,19 @@ namespace ImageUploader.Controllers
             }
             else
             {
-                var dict = new Dictionary<string, string>()
+                string storageConnectionString = "DefaultEndpointsProtocol=https;AccountName=f123;AccountKey=m5W+q8pwHOG0bAKap3J0e3yjbXnTfWvEJ2SR6l/h5Gl4NVdhoc1A4Diyp0O7TqsHhbOk79HfssLr+ASto9qxmQ==;EndpointSuffix=core.windows.net";
+                CloudStorageAccount storageacc = CloudStorageAccount.Parse(storageConnectionString);
+
+                CloudBlobClient blobClient = storageacc.CreateCloudBlobClient();
+                CloudBlobContainer container = blobClient.GetContainerReference("images");
+
+                CloudBlockBlob blockBlob = container.GetBlockBlobReference(file.FileName);
+                blockBlob.Properties.ContentType = "image/jpg";
+                using (var filestream = file.OpenReadStream())
                 {
-                    {"fileName",file.FileName },
-                    {"folderName", _webhost.WebRootPath+ "images" },
-                    {"fileSize",file.Length+" bytes" }
-                };
-                string json =JsonConvert.SerializeObject(dict);
-                HttpWebRequest req = (HttpWebRequest)WebRequest.Create("https://imageu.azurewebsites.net/api/ImageUpload?code=ca-4OOnBTnY7UaJiepi-iO-QB8yA8iZiz3ZawalxPnDqAzFuk_XhoA==");
-                req.Method = "POST";
-                req.ContentType = "application/json";
-                Stream stream = req.GetRequestStream();
-                byte[] buffer = Encoding.UTF8.GetBytes(json);
-                stream.Write(buffer, 0, buffer.Length);
-                HttpWebResponse res = (HttpWebResponse)req.GetResponse();
-                string response;
-                using (var reader = new StreamReader(res.GetResponseStream(), Encoding.ASCII))
-                {
-                    response = reader.ReadToEnd();
+                    await blockBlob.UploadFromStreamAsync(filestream);
                 }
-                return Ok(response);
+                return Ok(blockBlob);
             }
         }
     }
